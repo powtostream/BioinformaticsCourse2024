@@ -3,22 +3,6 @@ def hamming_dist(str_a, str_b):
     return sum(str_a[i] != str_b[i] for i in range(len(str_a)))
 
 
-def closest_match(key_str, search_str):
-    result = len(key_str)
-    pos = None
-    # iterate over string and count hamming dist for each position
-    for i in range(len(search_str)-len(key_str)+1):
-        h_dist = hamming_dist(key_str, search_str[i:i+len(key_str)])
-        # update result and position if h_dist is smaller
-        if h_dist < result:
-            result = h_dist
-            pos = i
-    if pos is not None:
-        return pos, search_str[pos:pos+len(key_str)], result
-    else:
-        return None, None, None
-
-
 def levenshtein_dist(str_a, str_b):
     # assume str_a is shorter, swap them if not
     if len(str_a) > len(str_b):
@@ -56,3 +40,20 @@ def levenshtein_dist(str_a, str_b):
         dp_line[-1] = cur_val
 
     return dp_line[-1]
+
+
+
+def closest_match(key_str, search_str):
+    result = len(key_str)
+    pos = None
+    # iterate over string and count hamming dist for each position
+    for i in range(len(search_str)-len(key_str)+1):
+        h_dist = hamming_dist(key_str, search_str[i:i+len(key_str)])
+        # update result and position if h_dist is smaller
+        if h_dist < result:
+            result = h_dist
+            pos = i
+    if pos is not None:
+        return pos, search_str[pos:pos+len(key_str)], result
+    else:
+        return None, None, None
