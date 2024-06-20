@@ -1,4 +1,5 @@
 import subprocess
+from matplotlib import pyplot as plt
 
 from Bio import SeqIO
 import networkx as nx
@@ -8,12 +9,12 @@ import sys
 test_fasta = "reads.fastq"
 
 
-class Node:
-
-    def __init__(self, seq=None, start=None, read=None):
-        self.seq = seq
-        self.start = start
-        self.read = read
+# class Node:
+#
+#     def __init__(self, seq=None, start=None, read=None):
+#         self.seq = seq
+#         self.start = start
+#         self.read = read
 
 
 def preprocess(fasta_path, trimmomatics=False, coral=False):
@@ -29,31 +30,71 @@ def preprocess(fasta_path, trimmomatics=False, coral=False):
     return reads
 
 
+def plot_graph(graph):
+    pos = nx.spring_layout(graph)
+    nx.draw(graph, pos)
+    node_labels = {k:k for k, v in graph.nodes.items()}
+
+    nx.draw_networkx_labels(graph, pos, labels=node_labels)
+    # edge_seq = nx.get_edge_attributes(graph, 'seq')
+    # edge_cov = nx.get_edge_attributes(graph, 'coverage')
+    # edge_labels = {key: f"{edge_seq[key]}_{edge_cov[key]}" for key in edge_cov.keys()}
+    edge_labels = nx.get_edge_attributes(graph, 'seq')
+    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels)
+    plt.show()
+
+
 def build_de_bruijn(fasta_path, k, trimmomatic=False, coral=False):
     reads = preprocess(fasta_path, trimmomatic, coral)
-    nodes = dict()
-
+    graph = nx.DiGraph()
     edge_coverage = defaultdict(int)
 
     for num, read in enumerate(reads):
         print(num)
-        for i in range(len(read) - k - 2):
+        for i in range(len(read) - k):
             kmer = str(read.seq[i:i + k])
-            if nodes.get(kmer) is None:
-                kmer_node = Node(seq=kmer, start=i, read=num)
-                nodes[kmer] = kmer_node
             next_kmer = str(read.seq[i + 1:i + k + 1])
-            if nodes.get(next_kmer) is None:
-                next_kmer_node = Node(seq=next_kmer, start=i+1, read=num)
-                nodes[next_kmer] = next_kmer_node
+            graph.add_edge(kmer, next_kmer, seq=str(read.seq[i:i + k + 1]))
             edge_coverage[(kmer, next_kmer)] += 1
-    return nodes, edge_coverage, reads
+
+    nx.set_edge_attributes(graph, edge_coverage, 'coverage')
+    nx.set_edge_attributes(graph, 1, 'condensed')
+    return graph
 
 
 def compress_graph(graph):
-    for node in graph.nodes():
-        pass
+    # nx.set_edge_attributes(graph, 1, 'condensed')
+    iter_list = list(graph.nodes())
+    for node in iter_list:
+        if graph.in_degree(node) == 1 and graph.out_degree(node) == 1:
+            prev_node = next(graph.predecessors(node))
+            next_node = next(graph.successors(node))
+            print(prev_node, node, next_node)
+            prev_edge = graph.edges[(prev_node, node)]
+            next_edge = graph.edges[(node, next_node)]
+            print(prev_edge, next_edge)
+            condensed = prev_edge["condensed"]+next_edge["condensed"]
+            coverage = (
+                prev_edge["coverage"]*prev_edge["condensed"] +
+                next_edge["coverage"]*next_edge["condensed"]
+                ) / condensed
+            seq = prev_edge["seq"]+next_edge["seq"][len(node):]
+            graph.add_edge(
+                prev_node, next_node, coverage=coverage, condensed=condensed,
+                seq=seq
+            )
+            graph.remove_node(node)
+    return graph
+
+# gr = build_de_bruijn("corrected.fastq", k=80, trimmomatic=False, coral=False)
+# nx.write_graphml(gr, "de_brujn")
+# gr2 = nx.read_graphml("de_brujn")
+# compressed_graph = compress_graph(gr2)
+# nx.draw(compressed_graph)
+# plt.show()
 
 
-nodes, cov, reads = build_de_bruijn("corrected.fastq", k=80, trimmomatic=False, coral=False)
-print("END")
+gr = build_de_bruijn("reads_light.fastq", k=6, trimmomatic=False, coral=False)
+plot_graph(gr)
+gr = compress_graph(gr)
+plot_graph(gr)
