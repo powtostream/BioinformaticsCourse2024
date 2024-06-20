@@ -10,7 +10,7 @@ alphabet = ["A", "T", "C", "G"]
 alph_num = list(range(4))
 al_dict = {nucl: i for i, nucl in enumerate(alphabet)}
 alph_set = set(alphabet)
-true_len = 20
+true_len = 30
 true_string = "".join(random.choices(alphabet, k=true_len))
 # print(true_string)
 
@@ -22,9 +22,9 @@ def get_quality(occ):
 
 
 
-read_len_mean = 10
+read_len_mean = 15
 read_len_std = 0
-read_num = 60
+read_num = 150
 reads = []
 reads_quality = []
 errors = []
@@ -38,8 +38,8 @@ for i in range(read_num):
     read_errors = []
     reads_start_pos[i] = start
     for j in range(start, start+read_len):
-        # err = random.randint(0, 75)
-        err = 0
+        err = random.randint(0, 75)
+        # err = 0
         # true_prob = (100 - err)/100
         # err_prob = (err / 3)/100
 
